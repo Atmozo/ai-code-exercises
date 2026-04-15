@@ -2,6 +2,7 @@
 package za.co.wethinkcode.taskmanager.cli;
 
 import org.apache.commons.cli.*;
+
 import za.co.wethinkcode.taskmanager.app.TaskManager;
 import za.co.wethinkcode.taskmanager.model.Task;
 
@@ -73,9 +74,23 @@ public class TaskManagerCli {
             case "stats":
                 handleStatsCommand();
                 break;
+            case "prune":
+                handlePruneCommand();
+                break;
             default:
                 System.err.println("Unknown command: " + command);
-                System.err.println("Available commands: create, list, status, priority, due, tag, untag, show, delete, stats");
+                System.err.println(
+                        "Available commands: create, list, status, priority, due, tag, untag, show,"
+                                + " delete, stats");
+        }
+    }
+
+    private static void handlePruneCommand() {
+        int count = taskManager.pruneAbandonedTasks();
+        if (count == 0) {
+            System.out.println("No tasks eligible for abandonment.");
+        } else {
+            System.out.println("Marked " + count + " task(s) as abandoned.");
         }
     }
 
@@ -89,9 +104,12 @@ public class TaskManagerCli {
         String description = args.length > 1 ? args[1] : "";
         int priority = args.length > 2 ? Integer.parseInt(args[2]) : 2;
         String dueDate = args.length > 3 ? args[3] : null;
-        List<String> tags = args.length > 4 ?
-                Arrays.asList(args[4].split(",")).stream().map(String::trim).collect(Collectors.toList()) :
-                null;
+        List<String> tags =
+                args.length > 4
+                        ? Arrays.asList(args[4].split(",")).stream()
+                                .map(String::trim)
+                                .collect(Collectors.toList())
+                        : null;
 
         String taskId = taskManager.createTask(title, description, priority, dueDate, tags);
         if (taskId != null) {
@@ -101,15 +119,25 @@ public class TaskManagerCli {
 
     private static void handleListCommand(String[] args) {
         Options options = new Options();
-        options.addOption(Option.builder("s").longOpt("status").hasArg().desc("Filter by status").build());
-        options.addOption(Option.builder("p").longOpt("priority").hasArg().desc("Filter by priority").build());
-        options.addOption(Option.builder("o").longOpt("overdue").desc("Show only overdue tasks").build());
+        options.addOption(
+                Option.builder("s").longOpt("status").hasArg().desc("Filter by status").build());
+        options.addOption(
+                Option.builder("p")
+                        .longOpt("priority")
+                        .hasArg()
+                        .desc("Filter by priority")
+                        .build());
+        options.addOption(
+                Option.builder("o").longOpt("overdue").desc("Show only overdue tasks").build());
 
         try {
             CommandLine cmd = new DefaultParser().parse(options, args);
 
             String status = cmd.getOptionValue("status");
-            Integer priority = cmd.hasOption("priority") ? Integer.valueOf(cmd.getOptionValue("priority")) : null;
+            Integer priority =
+                    cmd.hasOption("priority")
+                            ? Integer.valueOf(cmd.getOptionValue("priority"))
+                            : null;
             boolean showOverdue = cmd.hasOption("overdue");
 
             List<Task> tasks = taskManager.listTasks(status, priority, showOverdue);
@@ -264,7 +292,8 @@ public class TaskManagerCli {
     private static void showHelp(HelpFormatter formatter, Options options) {
         System.out.println("Task Manager CLI");
         System.out.println("Available commands:");
-        System.out.println("  create <title> [description] [priority] [due_date] [tags] - Create a new task");
+        System.out.println(
+                "  create <title> [description] [priority] [due_date] [tags] - Create a new task");
         System.out.println("  list [-s <status>] [-p <priority>] [-o] - List tasks");
         System.out.println("  status <task_id> <new_status> - Update task status");
         System.out.println("  priority <task_id> <new_priority> - Update task priority");
@@ -291,6 +320,9 @@ public class TaskManagerCli {
             case DONE:
                 statusSymbol = "[✓]";
                 break;
+            case ABANDONED:
+                statusSymbol = "[x]";
+                break;
             default:
                 statusSymbol = "[-]";
         }
@@ -313,17 +345,34 @@ public class TaskManagerCli {
                 prioritySymbol = "";
         }
 
-        String dueStr = task.getDueDate() != null ?
-                "Due: " + task.getDueDate().format(DateTimeFormatter.ISO_DATE) :
-                "No due date";
+        String dueStr =
+                task.getDueDate() != null
+                        ? "Due: " + task.getDueDate().format(DateTimeFormatter.ISO_DATE)
+                        : "No due date";
 
-        String tagsStr = !task.getTags().isEmpty() ?
-                "Tags: " + String.join(", ", task.getTags()) :
-                "No tags";
+        String tagsStr =
+                !task.getTags().isEmpty()
+                        ? "Tags: " + String.join(", ", task.getTags())
+                        : "No tags";
 
-        return statusSymbol + " " + task.getId().substring(0, 8) + " - " + prioritySymbol + " " + task.getTitle() + "\n" +
-                "  " + task.getDescription() + "\n" +
-                "  " + dueStr + " | " + tagsStr + "\n" +
-                "  Created: " + task.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        return statusSymbol
+                + " "
+                + task.getId().substring(0, 8)
+                + " - "
+                + prioritySymbol
+                + " "
+                + task.getTitle()
+                + "\n"
+                + "  "
+                + task.getDescription()
+                + "\n"
+                + "  "
+                + dueStr
+                + " | "
+                + tagsStr
+                + "\n"
+                + "  Created: "
+                + task.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
     }
 }
+

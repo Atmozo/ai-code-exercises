@@ -18,7 +18,12 @@ public class Task {
     private LocalDateTime completedAt;
     private List<String> tags;
 
-    public Task(String title, String description, TaskPriority priority, LocalDateTime dueDate, List<String> tags) {
+    public Task(
+            String title,
+            String description,
+            TaskPriority priority,
+            LocalDateTime dueDate,
+            List<String> tags) {
         this.id = UUID.randomUUID().toString();
         this.title = title;
         this.description = description;
@@ -164,5 +169,19 @@ public class Task {
 
     public boolean removeTag(String tag) {
         return this.tags.remove(tag);
+    }
+
+    public boolean isAutoAbandonable() {
+        if (this.dueDate == null) return false;
+        boolean overdueBySevenDays = this.dueDate.isBefore(LocalDateTime.now().minusDays(7));
+        boolean notHighPriority =
+                this.priority != TaskPriority.HIGH && this.priority != TaskPriority.URGENT;
+        boolean notFinished = this.status != TaskStatus.DONE && this.status != TaskStatus.ABANDONED;
+        return overdueBySevenDays && notHighPriority && notFinished;
+    }
+
+    public void markAsAbandoned() {
+        this.status = TaskStatus.ABANDONED;
+        this.updatedAt = LocalDateTime.now();
     }
 }

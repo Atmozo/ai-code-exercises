@@ -2,6 +2,7 @@
 package za.co.wethinkcode.taskmanager.storage;
 
 import com.google.gson.*;
+
 import za.co.wethinkcode.taskmanager.model.Task;
 import za.co.wethinkcode.taskmanager.model.TaskPriority;
 import za.co.wethinkcode.taskmanager.model.TaskStatus;
@@ -29,11 +30,12 @@ public class TaskStorage {
         this.tasks = new HashMap<>();
 
         // Configure Gson with custom adapters for LocalDateTime
-        this.gson = new GsonBuilder()
-                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeSerializer())
-                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeDeserializer())
-                .setPrettyPrinting()
-                .create();
+        this.gson =
+                new GsonBuilder()
+                        .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeSerializer())
+                        .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeDeserializer())
+                        .setPrettyPrinting()
+                        .create();
 
         load();
     }
@@ -108,9 +110,11 @@ public class TaskStorage {
     }
 
     public List<Task> getOverdueTasks() {
-        return tasks.values().stream()
-                .filter(Task::isOverdue)
-                .collect(Collectors.toList());
+        return tasks.values().stream().filter(Task::isOverdue).collect(Collectors.toList());
+    }
+
+    public List<Task> getAutoAbandonableTasks() {
+        return tasks.values().stream().filter(Task::isAutoAbandonable).collect(Collectors.toList());
     }
 
     // Custom serializer for LocalDateTime
@@ -118,7 +122,8 @@ public class TaskStorage {
         private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
         @Override
-        public JsonElement serialize(LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
+        public JsonElement serialize(
+                LocalDateTime src, Type typeOfSrc, JsonSerializationContext context) {
             return new JsonPrimitive(formatter.format(src));
         }
     }
@@ -126,7 +131,8 @@ public class TaskStorage {
     // Custom deserializer for LocalDateTime
     private static class LocalDateTimeDeserializer implements JsonDeserializer<LocalDateTime> {
         @Override
-        public LocalDateTime deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+        public LocalDateTime deserialize(
+                JsonElement json, Type typeOfT, JsonDeserializationContext context)
                 throws JsonParseException {
             return LocalDateTime.parse(json.getAsString(), DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         }

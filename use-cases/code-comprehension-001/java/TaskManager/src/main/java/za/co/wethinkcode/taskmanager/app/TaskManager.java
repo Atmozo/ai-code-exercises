@@ -25,8 +25,12 @@ public class TaskManager {
         return storage;
     }
 
-    public String createTask(String title, String description, int priorityValue,
-                             String dueDateStr, List<String> tags) {
+    public String createTask(
+            String title,
+            String description,
+            int priorityValue,
+            String dueDateStr,
+            List<String> tags) {
         TaskPriority priority = TaskPriority.fromValue(priorityValue);
         LocalDateTime dueDate = null;
 
@@ -163,9 +167,15 @@ public class TaskManager {
 
         // Count completed in last 7 days
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        int completedRecently = (int) tasks.stream()
-                .filter(task -> task.getCompletedAt() != null && task.getCompletedAt().isAfter(sevenDaysAgo))
-                .count();
+        int completedRecently =
+                (int)
+                        tasks.stream()
+                                .filter(
+                                        task ->
+                                                task.getCompletedAt() != null
+                                                        && task.getCompletedAt()
+                                                                .isAfter(sevenDaysAgo))
+                                .count();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("total", total);
@@ -175,5 +185,16 @@ public class TaskManager {
         stats.put("completedLastWeek", completedRecently);
 
         return stats;
+    }
+
+    public int pruneAbandonedTasks() {
+        List<Task> toAbandon = getStorage().getAutoAbandonableTasks();
+        for (Task task : toAbandon) {
+            task.markAsAbandoned();
+        }
+        if (!toAbandon.isEmpty()) {
+            getStorage().save();
+        }
+        return toAbandon.size();
     }
 }
