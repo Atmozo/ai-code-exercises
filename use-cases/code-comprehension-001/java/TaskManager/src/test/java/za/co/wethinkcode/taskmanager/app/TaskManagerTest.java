@@ -1,24 +1,26 @@
 package za.co.wethinkcode.taskmanager.app;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import za.co.wethinkcode.taskmanager.model.Task;
+import za.co.wethinkcode.taskmanager.model.TaskPriority;
+import za.co.wethinkcode.taskmanager.model.TaskStatus;
+import za.co.wethinkcode.taskmanager.storage.TaskStorage;
+
 import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
-import za.co.wethinkcode.taskmanager.model.Task;
-import za.co.wethinkcode.taskmanager.model.TaskPriority;
-import za.co.wethinkcode.taskmanager.model.TaskStatus;
-import za.co.wethinkcode.taskmanager.storage.TaskStorage;
-
 public class TaskManagerTest {
 
-    private final static String test_storage_file = "test_storage.json";
+    private static final String test_storage_file = "test_storage.json";
 
     @AfterEach
     public void tearDown() {
@@ -31,14 +33,13 @@ public class TaskManagerTest {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to delete the test storage file: "+e.getMessage());
+            System.err.println("Failed to delete the test storage file: " + e.getMessage());
         }
     }
 
     /**
-     * Test getStatistics when there are no tasks in the storage.
-     * This tests the edge case of an empty task list, which is handled
-     * in the getStatistics method by initializing counts to zero.
+     * Test getStatistics when there are no tasks in the storage. This tests the edge case of an
+     * empty task list, which is handled in the getStatistics method by initializing counts to zero.
      */
     @Test
     public void testGetStatisticsWithEmptyTaskList() {
@@ -61,8 +62,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that the TaskManager constructor creates a non-null TaskStorage object
-     * when given a valid storage path.
+     * Tests that the TaskManager constructor creates a non-null TaskStorage object when given a
+     * valid storage path.
      */
     @Test
     public void testTaskManagerConstructorWithValidPath() {
@@ -72,8 +73,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for TaskManager constructor
-     * Verifies that a TaskManager object can be created with a given storage path
+     * Test case for TaskManager constructor Verifies that a TaskManager object can be created with
+     * a given storage path
      */
     @Test
     public void test_TaskManager_1() {
@@ -83,9 +84,9 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the addTagToTask method when the task with the given ID does not exist.
-     * This is a negative test case that verifies the method returns false when
-     * attempting to add a tag to a non-existent task.
+     * Tests the addTagToTask method when the task with the given ID does not exist. This is a
+     * negative test case that verifies the method returns false when attempting to add a tag to a
+     * non-existent task.
      */
     @Test
     public void test_addTagToTask_nonExistentTask() {
@@ -100,14 +101,15 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that addTagToTask successfully adds a tag to an existing task.
-     * Path constraints: (task != null)
-     * Expected result: The method should return true, indicating successful tag addition.
+     * Tests that addTagToTask successfully adds a tag to an existing task. Path constraints: (task
+     * != null) Expected result: The method should return true, indicating successful tag addition.
      */
     @Test
     public void test_addTagToTask_successfullyAddsTag() {
         TaskManager taskManager = new TaskManager(test_storage_file);
-        String taskId = taskManager.createTask("Test Task", "TODO", 1, "2025-06-01", Collections.emptyList());
+        String taskId =
+                taskManager.createTask(
+                        "Test Task", "TODO", 1, "2025-06-01", Collections.emptyList());
 
         boolean result = taskManager.addTagToTask(taskId, "new_tag");
         assertTrue(result);
@@ -117,15 +119,15 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests creating a task without a due date.
-     * This test verifies that the createTask method correctly handles the case
-     * where the dueDateStr is null or empty, ensuring that a task is created
-     * with the provided title, description, priority, and tags, but without a due date.
+     * Tests creating a task without a due date. This test verifies that the createTask method
+     * correctly handles the case where the dueDateStr is null or empty, ensuring that a task is
+     * created with the provided title, description, priority, and tags, but without a due date.
      */
     @Test
     public void test_createTaskWithoutDueDate() {
         TaskManager taskManager = new TaskManager(test_storage_file);
-        String taskId = taskManager.createTask("Test Task", "TODO", 1, null, Collections.emptyList());
+        String taskId =
+                taskManager.createTask("Test Task", "TODO", 1, null, Collections.emptyList());
         Task craetedTask = taskManager.getTaskDetails(taskId);
         assertEquals("Test Task", craetedTask.getTitle());
         assertEquals("TODO", craetedTask.getDescription());
@@ -135,8 +137,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that createTask returns null when an invalid date format is provided.
-     * This tests the explicit error handling for date parsing in the createTask method.
+     * Tests that createTask returns null when an invalid date format is provided. This tests the
+     * explicit error handling for date parsing in the createTask method.
      */
     @Test
     public void test_createTask_invalidDateFormat() {
@@ -147,14 +149,15 @@ public class TaskManagerTest {
         String invalidDateStr = "2023/05/01"; // Invalid format, should be YYYY-MM-DD
         List<String> tags = new ArrayList<>();
 
-        String result = taskManager.createTask(title, description, priorityValue, invalidDateStr, tags);
+        String result =
+                taskManager.createTask(title, description, priorityValue, invalidDateStr, tags);
 
         assertNull(result, "Expected null result for invalid date format");
     }
 
     /**
-     * Tests the createTask method when a non-empty due date string is provided but in an invalid format.
-     * This should result in the method returning null due to the date parsing exception.
+     * Tests the createTask method when a non-empty due date string is provided but in an invalid
+     * format. This should result in the method returning null due to the date parsing exception.
      */
     @Test
     public void test_createTask_invalidDateFormat_2() {
@@ -171,8 +174,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests deleteTask method with a non-existent task ID.
-     * This test verifies that the method returns false when attempting to delete a task that doesn't exist.
+     * Tests deleteTask method with a non-existent task ID. This test verifies that the method
+     * returns false when attempting to delete a task that doesn't exist.
      */
     @Test
     public void test_deleteTask_nonExistentTask() {
@@ -182,8 +185,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for deleteTask method when the task exists
-     * Verifies that the method returns true when a task is successfully deleted
+     * Test case for deleteTask method when the task exists Verifies that the method returns true
+     * when a task is successfully deleted
      */
     @Test
     public void test_deleteTask_whenTaskExists_returnsTrue() {
@@ -201,8 +204,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for getStatistics method
-     * Verifies that the method returns correct statistics for tasks
+     * Test case for getStatistics method Verifies that the method returns correct statistics for
+     * tasks
      */
     @Test
     public void test_getStatistics_returnsCorrectStatistics() {
@@ -237,8 +240,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that getTaskDetails returns null when given a non-existent task ID.
-     * This tests the edge case of requesting details for a task that doesn't exist in storage.
+     * Tests that getTaskDetails returns null when given a non-existent task ID. This tests the edge
+     * case of requesting details for a task that doesn't exist in storage.
      */
     @Test
     public void test_getTaskDetails_nonExistentTask() {
@@ -248,19 +251,20 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for getTaskDetails method
-     * Verifies that the method correctly returns the task details from storage
+     * Test case for getTaskDetails method Verifies that the method correctly returns the task
+     * details from storage
      */
     @Test
     public void test_getTaskDetails_returnsTaskFromStorage() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         String taskId = "task123";
         Task expectedTask = new Task("Test Task");
@@ -294,8 +298,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that listTasks returns tasks filtered by status when a valid status is provided,
-     * and showOverdue is false.
+     * Tests that listTasks returns tasks filtered by status when a valid status is provided, and
+     * showOverdue is false.
      */
     @Test
     public void test_listTasks_filter_by_status() {
@@ -313,24 +317,22 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the listTasks method when no filters are applied and showOverdue is false.
-     * This should return all tasks from the storage.
+     * Tests the listTasks method when no filters are applied and showOverdue is false. This should
+     * return all tasks from the storage.
      */
     @Test
     public void test_listTasks_returnsAllTasks() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
-        List<Task> expectedTasks = Arrays.asList(
-            new Task("Task 1"),
-            new Task("Task 2"),
-            new Task("Task 3")
-        );
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
+        List<Task> expectedTasks =
+                Arrays.asList(new Task("Task 1"), new Task("Task 2"), new Task("Task 3"));
         when(mockStorage.getAllTasks()).thenReturn(expectedTasks);
 
         // Act
@@ -342,19 +344,20 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the listTasks method when showOverdue is true.
-     * Verifies that the method returns overdue tasks from storage.
+     * Tests the listTasks method when showOverdue is true. Verifies that the method returns overdue
+     * tasks from storage.
      */
     @Test
     public void test_listTasks_returnsOverdueTasks() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         List<Task> overdueTasks = mock(List.class);
         when(mockStorage.getOverdueTasks()).thenReturn(overdueTasks);
@@ -368,8 +371,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that listTasks returns overdue tasks when showOverdue is true,
-     * regardless of other filter parameters.
+     * Tests that listTasks returns overdue tasks when showOverdue is true, regardless of other
+     * filter parameters.
      */
     @Test
     public void test_listTasks_showOverdue_ignores_other_filters() {
@@ -387,19 +390,20 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the listTasks method when a priority filter is provided.
-     * Verifies that the method returns tasks filtered by the specified priority.
+     * Tests the listTasks method when a priority filter is provided. Verifies that the method
+     * returns tasks filtered by the specified priority.
      */
     @Test
     public void test_listTasks_whenPriorityFilterProvided() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         Task task1 = new Task("Task 1");
         Task task2 = new Task("Task 2");
@@ -416,20 +420,21 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for listTasks method when a status filter is provided.
-     * This test verifies that the method correctly returns tasks filtered by status
-     * when a non-null statusFilter is provided and showOverdue is false.
+     * Test case for listTasks method when a status filter is provided. This test verifies that the
+     * method correctly returns tasks filtered by status when a non-null statusFilter is provided
+     * and showOverdue is false.
      */
     @Test
     public void test_listTasks_withStatusFilter() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         Task task1 = new Task("Task 1");
         Task task2 = new Task("Task 2");
@@ -446,9 +451,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests removing a non-existent tag from an existing task.
-     * This test verifies that the method returns false when attempting to remove
-     * a tag that doesn't exist on the task.
+     * Tests removing a non-existent tag from an existing task. This test verifies that the method
+     * returns false when attempting to remove a tag that doesn't exist on the task.
      */
     @Test
     public void test_removeTagFromTask_nonExistentTag() {
@@ -458,9 +462,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests removing a tag from a non-existent task.
-     * This test verifies that the method returns false when attempting to remove a tag
-     * from a task that doesn't exist in the storage.
+     * Tests removing a tag from a non-existent task. This test verifies that the method returns
+     * false when attempting to remove a tag from a task that doesn't exist in the storage.
      */
     @Test
     public void test_removeTagFromTask_nonExistentTask() {
@@ -475,12 +478,13 @@ public class TaskManagerTest {
     @Test
     public void test_removeTagFromTask_whenTaskExistsAndTagIsRemoved() {
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
         String taskId = "test-task-id";
         String tag = "test-tag";
 
@@ -496,8 +500,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the removeTagFromTask method when the task is null or the tag cannot be removed.
-     * This test covers the scenario where the method should return false.
+     * Tests the removeTagFromTask method when the task is null or the tag cannot be removed. This
+     * test covers the scenario where the method should return false.
      */
     @Test
     public void test_removeTagFromTask_whenTaskIsNullOrTagCannotBeRemoved() {
@@ -511,8 +515,8 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests that updateTaskDueDate returns false when given an invalid date format.
-     * This tests the explicit error handling in the method for DateTimeParseException.
+     * Tests that updateTaskDueDate returns false when given an invalid date format. This tests the
+     * explicit error handling in the method for DateTimeParseException.
      */
     @Test
     public void test_updateTaskDueDate_invalidDateFormat() {
@@ -526,20 +530,21 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for updating a task's due date successfully.
-     * This test verifies that the updateTaskDueDate method correctly parses the input date,
-     * creates a Task object with the new due date, and calls the storage to update the task.
+     * Test case for updating a task's due date successfully. This test verifies that the
+     * updateTaskDueDate method correctly parses the input date, creates a Task object with the new
+     * due date, and calls the storage to update the task.
      */
     @Test
     public void test_updateTaskDueDate_successfulUpdate() {
         // Arrange
         TaskStorage mockStorage = mock(TaskStorage.class);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         String taskId = "task123";
         String newDueDateStr = "2023-12-31";
@@ -556,14 +561,14 @@ public class TaskManagerTest {
 
         // Assert
         assertTrue(result);
-        verify(mockStorage).updateTask(eq(taskId), argThat(task ->
-                task.getDueDate().equals(expectedDueDate)));
+        verify(mockStorage)
+                .updateTask(eq(taskId), argThat(task -> task.getDueDate().equals(expectedDueDate)));
     }
 
     /**
-     * Tests updateTaskPriority method with an invalid priority value.
-     * This test verifies that the method handles an out-of-range priority value
-     * by returning false, indicating the update was not successful.
+     * Tests updateTaskPriority method with an invalid priority value. This test verifies that the
+     * method handles an out-of-range priority value by returning false, indicating the update was
+     * not successful.
      */
     @Test
     public void test_updateTaskPriority_invalidPriorityValue() {
@@ -577,9 +582,9 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests the updateTaskStatus method when trying to mark a non-existent task as DONE.
-     * This test verifies that the method returns false when attempting to update
-     * the status of a task that doesn't exist in the storage.
+     * Tests the updateTaskStatus method when trying to mark a non-existent task as DONE. This test
+     * verifies that the method returns false when attempting to update the status of a task that
+     * doesn't exist in the storage.
      */
     @Test
     public void test_updateTaskStatus_nonExistentTaskToDone() {
@@ -591,27 +596,29 @@ public class TaskManagerTest {
 
         boolean result = taskManager.updateTaskStatus(nonExistentTaskId, newStatusValue);
 
-        assertFalse( result, "Updating status of non-existent task should return false");
+        assertFalse(result, "Updating status of non-existent task should return false");
     }
 
     /**
-     * Tests updating a task status to DONE when the task does not exist.
-     * This is an edge case explicitly handled in the updateTaskStatus method.
+     * Tests updating a task status to DONE when the task does not exist. This is an edge case
+     * explicitly handled in the updateTaskStatus method.
      */
     @Test
     public void test_updateTaskStatus_nonExistentTask_returnsFalse() {
-        TaskStorage mockStorage = new TaskStorage(test_storage_file) {
-            @Override
-            public Task getTask(String taskId) {
-                return null; // Simulating a non-existent task
-            }
-        };
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskStorage mockStorage =
+                new TaskStorage(test_storage_file) {
+                    @Override
+                    public Task getTask(String taskId) {
+                        return null; // Simulating a non-existent task
+                    }
+                };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
 
         boolean result = taskManager.updateTaskStatus("non_existent_task_id", "done");
 
@@ -619,20 +626,20 @@ public class TaskManagerTest {
     }
 
     /**
-     * Test case for updating a task status to DONE when the task exists.
-     * This test verifies that the updateTaskStatus method returns true when
-     * updating an existing task's status to DONE.
+     * Test case for updating a task status to DONE when the task exists. This test verifies that
+     * the updateTaskStatus method returns true when updating an existing task's status to DONE.
      */
     @Test
     public void test_updateTaskStatus_taskExistsAndMarkedAsDone() {
         // Setup
         TaskStorage mockStorage = new TaskStorage(test_storage_file);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
         Task testTask = new Task("Test Task");
         String taskId = mockStorage.addTask(testTask);
 
@@ -646,20 +653,21 @@ public class TaskManagerTest {
     }
 
     /**
-     * Tests updating a task status to a non-DONE status.
-     * This test verifies that when updating a task status to something other than DONE,
-     * the method creates a temporary task with the new status and calls the storage's updateTask method.
+     * Tests updating a task status to a non-DONE status. This test verifies that when updating a
+     * task status to something other than DONE, the method creates a temporary task with the new
+     * status and calls the storage's updateTask method.
      */
     @Test
     public void test_updateTaskStatus_3() {
         // Setup
         TaskStorage mockStorage = new TaskStorage(test_storage_file);
-        TaskManager taskManager = new TaskManager(test_storage_file) {
-            @Override
-            public TaskStorage getStorage() {
-                return mockStorage;
-            }
-        };
+        TaskManager taskManager =
+                new TaskManager(test_storage_file) {
+                    @Override
+                    public TaskStorage getStorage() {
+                        return mockStorage;
+                    }
+                };
         Task testTask = new Task("Test Task");
         String taskId = mockStorage.addTask(testTask);
 
@@ -671,5 +679,133 @@ public class TaskManagerTest {
         assertEquals(TaskStatus.IN_PROGRESS, mockStorage.getTask(taskId).getStatus());
     }
 
+    // --- Abandoned Task Rule Tests ---
 
+    /**
+     * A task with no due date can never be auto-abandoned. isAutoAbandonable() returns false
+     * immediately if dueDate is null.
+     */
+    @Test
+    public void test_isAutoAbandonable_noDueDate() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String taskId = taskManager.createTask("No due date task", "desc", 1, null, null);
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(
+                task.isAutoAbandonable(), "Task with no due date should not be auto-abandonable");
+    }
+
+    /**
+     * A task overdue by only 6 days has not crossed the 7-day threshold yet. Should return false.
+     */
+    @Test
+    public void test_isAutoAbandonable_overdueBy6Days() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(6).toLocalDate().toString();
+        String taskId = taskManager.createTask("Almost overdue", "desc", 1, dueDate, null);
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(
+                task.isAutoAbandonable(), "Task overdue by 6 days should not be auto-abandonable");
+    }
+
+    /** A LOW priority task overdue by 8 days meets all conditions. Should return true. */
+    @Test
+    public void test_isAutoAbandonable_overdueBy8Days_lowPriority() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId = taskManager.createTask("Old low task", "desc", 1, dueDate, null);
+        Task task = taskManager.getTaskDetails(taskId);
+        assertTrue(
+                task.isAutoAbandonable(),
+                "LOW priority task overdue by 8 days should be auto-abandonable");
+    }
+
+    /**
+     * HIGH priority tasks are protected from auto-abandonment regardless of how overdue they are.
+     * Should return false.
+     */
+    @Test
+    public void test_isAutoAbandonable_overdueBy8Days_highPriority() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId = taskManager.createTask("Old high task", "desc", 3, dueDate, null);
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(
+                task.isAutoAbandonable(),
+                "HIGH priority task should be protected from auto-abandonment");
+    }
+
+    /** URGENT priority tasks are protected from auto-abandonment. Should return false. */
+    @Test
+    public void test_isAutoAbandonable_overdueBy8Days_urgent() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId = taskManager.createTask("Urgent task", "desc", 4, dueDate, null);
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(
+                task.isAutoAbandonable(),
+                "URGENT priority task should be protected from auto-abandonment");
+    }
+
+    /** A task already marked DONE should not be abandoned even if overdue. Should return false. */
+    @Test
+    public void test_isAutoAbandonable_alreadyDone() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId = taskManager.createTask("Done task", "desc", 1, dueDate, null);
+        taskManager.updateTaskStatus(taskId, "done");
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(task.isAutoAbandonable(), "DONE task should not be auto-abandonable");
+    }
+
+    /** A task already ABANDONED should not be abandoned again. Should return false. */
+    @Test
+    public void test_isAutoAbandonable_alreadyAbandoned() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId = taskManager.createTask("Already abandoned", "desc", 1, dueDate, null);
+        taskManager.updateTaskStatus(taskId, "abandoned");
+        Task task = taskManager.getTaskDetails(taskId);
+        assertFalse(
+                task.isAutoAbandonable(),
+                "Already ABANDONED task should not be auto-abandonable again");
+    }
+
+    /** pruneAbandonedTasks returns 0 and makes no changes when no tasks are eligible. */
+    @Test
+    public void test_pruneAbandonedTasks_noEligible() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        // create a task not yet overdue by 7 days
+        String dueDate = LocalDateTime.now().minusDays(3).toLocalDate().toString();
+        taskManager.createTask("Recent task", "desc", 1, dueDate, null);
+        int count = taskManager.pruneAbandonedTasks();
+        assertEquals(0, count, "No tasks should be pruned when none are eligible");
+    }
+
+    /** pruneAbandonedTasks marks all eligible tasks as ABANDONED and returns the correct count. */
+    @Test
+    public void test_pruneAbandonedTasks_marksEligible() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String taskId1 = taskManager.createTask("Old task 1", "desc", 1, dueDate, null);
+        String taskId2 = taskManager.createTask("Old task 2", "desc", 2, dueDate, null);
+        int count = taskManager.pruneAbandonedTasks();
+        assertEquals(2, count, "Two eligible tasks should be pruned");
+        assertEquals(TaskStatus.ABANDONED, taskManager.getTaskDetails(taskId1).getStatus());
+        assertEquals(TaskStatus.ABANDONED, taskManager.getTaskDetails(taskId2).getStatus());
+    }
+
+    /**
+     * pruneAbandonedTasks does not abandon HIGH priority tasks even if overdue by more than 7 days.
+     */
+    @Test
+    public void test_pruneAbandonedTasks_sparesHighPriority() {
+        TaskManager taskManager = new TaskManager(test_storage_file);
+        String dueDate = LocalDateTime.now().minusDays(8).toLocalDate().toString();
+        String lowId = taskManager.createTask("Low task", "desc", 1, dueDate, null);
+        String highId = taskManager.createTask("High task", "desc", 3, dueDate, null);
+        int count = taskManager.pruneAbandonedTasks();
+        assertEquals(1, count, "Only the LOW priority task should be pruned");
+        assertEquals(TaskStatus.ABANDONED, taskManager.getTaskDetails(lowId).getStatus());
+        assertEquals(TaskStatus.TODO, taskManager.getTaskDetails(highId).getStatus());
+    }
 }
