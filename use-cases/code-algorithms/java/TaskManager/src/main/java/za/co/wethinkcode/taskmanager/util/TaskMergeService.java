@@ -8,6 +8,28 @@ import java.util.*;
 public class TaskMergeService {
 
     /**
+     * Strategy used to resolve conflicts when the same task exists in both local and remote
+     * sources.
+     *
+     * <p>TIMESTAMP: most recently updated version wins (default) LOCAL_WINS: local version always
+     * used as base regardless of timestamp
+     */
+    public enum ConflictStrategy {
+        TIMESTAMP,
+        LOCAL_WINS
+    }
+
+    private final ConflictStrategy strategy;
+
+    public TaskMergeService(ConflictStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    public TaskMergeService() {
+        this.strategy = ConflictStrategy.TIMESTAMP;
+    }
+
+    /**
      * Merge two task lists with conflict resolution.
      *
      * @param localTasks Map of tasks from local source {task_id: task}
@@ -21,7 +43,6 @@ public class TaskMergeService {
         Map<String, Task> toCreateLocal = new HashMap<>();
         Map<String, Task> toUpdateLocal = new HashMap<>();
 
-        // Step 1: Identify all unique task IDs across both sources
         Set<String> allTaskIds = new HashSet<>();
         allTaskIds.addAll(localTasks.keySet());
         allTaskIds.addAll(remoteTasks.keySet());
@@ -30,91 +51,105 @@ public class TaskMergeService {
             Task localTask = localTasks.get(taskId);
             Task remoteTask = remoteTasks.get(taskId);
 
-            // Case 1: Task exists only locally - add to remote
+            // Case 1: local only — push to remote
             if (localTask != null && remoteTask == null) {
                 mergedTasks.put(taskId, localTask);
                 toCreateRemote.put(taskId, localTask);
-            }
-            // Case 2: Task exists only in remote - add to local
-            else if (localTask == null && remoteTask != null) {
+
+                // Case 2: remote only — pull to local
+            } else if (localTask == null && remoteTask != null) {
                 mergedTasks.put(taskId, remoteTask);
                 toCreateLocal.put(taskId, remoteTask);
-            }
-            // Case 3: Task exists in both - resolve conflicts
-            else {
+
+                // Case 3: both exist — resolve conflict
+            } else {
                 ConflictResolution resolution = resolveTaskConflict(localTask, remoteTask);
                 Task mergedTask = resolution.getMergedTask();
-
                 mergedTasks.put(taskId, mergedTask);
 
-                if (resolution.isShouldUpdateLocal()) {
-                    toUpdateLocal.put(taskId, mergedTask);
-                }
-
-                if (resolution.isShouldUpdateRemote()) {
-                    toUpdateRemote.put(taskId, mergedTask);
-                }
+                if (resolution.isShouldUpdateLocal()) toUpdateLocal.put(taskId, mergedTask);
+                if (resolution.isShouldUpdateRemote()) toUpdateRemote.put(taskId, mergedTask);
             }
         }
 
         return new MergeResult(
-                mergedTasks,
-                toCreateRemote,
-                toUpdateRemote,
-                toCreateLocal,
-                toUpdateLocal
-        );
+                mergedTasks, toCreateRemote, toUpdateRemote, toCreateLocal, toUpdateLocal);
     }
 
     /**
-     * Resolve conflicts between two versions of the same task.
+     * Resolves two versions of the same task into one merged result. Normally the newer updated
+     * version is used as the base state. If either version is DONE, completed status is preserved —
+     * unless local was updated after the remote completion, indicating an intentional reopen. Tags
+     * are merged using union semantics; unique tags from both sides are kept. Inputs are not
+     * mutated; a copied task is returned as the merged result.
+     *
+     * @param localTask local version of the task
+     * @param remoteTask remote version of the task
+     * @return merged task plus flags indicating whether local and/or remote copies should be
+     *     updated to match the merged result
      */
     private ConflictResolution resolveTaskConflict(Task localTask, Task remoteTask) {
-        // Make a copy of the local task to use as our base
         Task mergedTask = copyTask(localTask);
 
-        // Track if we need to update either source
         boolean shouldUpdateLocal = false;
         boolean shouldUpdateRemote = false;
 
-        // Most recent update wins for most fields
-        if (remoteTask.getUpdatedAt().isAfter(localTask.getUpdatedAt())) {
-            // Remote task is newer, update local fields
-            mergedTask.setTitle(remoteTask.getTitle());
-            mergedTask.setDescription(remoteTask.getDescription());
-            mergedTask.setPriority(remoteTask.getPriority());
-            mergedTask.setDueDate(remoteTask.getDueDate());
-            shouldUpdateLocal = true;
-        } else {
-            // Local task is newer or same age, update remote fields
-            shouldUpdateRemote = true;
-        }
+        boolean localWins = strategy == ConflictStrategy.LOCAL_WINS;
+        boolean remoteNewer = remoteTask.getUpdatedAt().isAfter(localTask.getUpdatedAt());
 
-        // Special handling for completed status - completed wins over not completed
-        if (remoteTask.getStatus() == TaskStatus.DONE && localTask.getStatus() != TaskStatus.DONE) {
-            mergedTask.setStatus(TaskStatus.DONE);
-            mergedTask.setCompletedAt(remoteTask.getCompletedAt());
-            shouldUpdateLocal = true;
-        } else if (localTask.getStatus() == TaskStatus.DONE && remoteTask.getStatus() != TaskStatus.DONE) {
-            // Keep local status (already in mergedTask)
-            shouldUpdateRemote = true;
-        } else if (remoteTask.getStatus() != localTask.getStatus()) {
-            // Different non-completed status - most recent wins
-            if (remoteTask.getUpdatedAt().isAfter(localTask.getUpdatedAt())) {
-                mergedTask.setStatus(remoteTask.getStatus());
+        /*
+         * Base selection — non-status fields only.
+         * Skipped entirely when either side is DONE; status block is authoritative then.
+         */
+        if (remoteTask.getStatus() != TaskStatus.DONE && localTask.getStatus() != TaskStatus.DONE) {
+
+            if (!localWins && remoteNewer) {
+                mergedTask.setTitle(remoteTask.getTitle());
+                mergedTask.setDescription(remoteTask.getDescription());
+                mergedTask.setPriority(remoteTask.getPriority());
+                mergedTask.setDueDate(remoteTask.getDueDate());
                 shouldUpdateLocal = true;
             } else {
-                // Keep local status (already in mergedTask)
                 shouldUpdateRemote = true;
             }
         }
 
-        // Merge tags from both sources (union)
+        /*
+         * Status resolution — authoritative for all status decisions.
+         * DONE always wins over non-DONE regardless of timestamp.
+         * Reopen requires field-level diff tracking — deferred.
+         */
+        if (remoteTask.getStatus() == TaskStatus.DONE && localTask.getStatus() != TaskStatus.DONE) {
+            // Remote DONE wins — apply to local
+            mergedTask.setStatus(TaskStatus.DONE);
+            mergedTask.setCompletedAt(remoteTask.getCompletedAt());
+            shouldUpdateLocal = true;
+
+        } else if (localTask.getStatus() == TaskStatus.DONE
+                && remoteTask.getStatus() != TaskStatus.DONE) {
+            // Local DONE wins — remote needs updating
+            shouldUpdateRemote = true;
+
+        } else if (remoteTask.getStatus() != localTask.getStatus()
+                && remoteTask.getStatus() != TaskStatus.DONE
+                && localTask.getStatus() != TaskStatus.DONE) {
+            // Different active statuses — apply conflict strategy
+            if (!localWins && remoteNewer) {
+                mergedTask.setStatus(remoteTask.getStatus());
+                shouldUpdateLocal = true;
+            } else {
+                shouldUpdateRemote = true;
+            }
+        }
+
+        /*
+         * Tag merge — union semantics.
+         * Tags are never deleted by a merge; removal requires explicit action on both sides.
+         */
         Set<String> allTags = new HashSet<>(localTask.getTags());
         allTags.addAll(remoteTask.getTags());
         mergedTask.setTags(new ArrayList<>(allTags));
 
-        // If tags changed in either source, update both
         if (!new HashSet<>(mergedTask.getTags()).equals(new HashSet<>(localTask.getTags()))) {
             shouldUpdateLocal = true;
         }
@@ -122,16 +157,17 @@ public class TaskMergeService {
             shouldUpdateRemote = true;
         }
 
-        // Update the timestamp to latest
+        /*
+         * Timestamp alignment — merged record takes the later of the two timestamps.
+         */
         mergedTask.setUpdatedAt(
-                localTask.getUpdatedAt().isAfter(remoteTask.getUpdatedAt()) ?
-                        localTask.getUpdatedAt() : remoteTask.getUpdatedAt()
-        );
+                localTask.getUpdatedAt().isAfter(remoteTask.getUpdatedAt())
+                        ? localTask.getUpdatedAt()
+                        : remoteTask.getUpdatedAt());
 
         return new ConflictResolution(mergedTask, shouldUpdateLocal, shouldUpdateRemote);
     }
 
-    // Helper method to copy a task
     private Task copyTask(Task original) {
         Task copy = new Task(original.getTitle(), original.getDescription());
         copy.setId(original.getId());
@@ -145,13 +181,13 @@ public class TaskMergeService {
         return copy;
     }
 
-    // Helper class to return conflict resolution results
     private static class ConflictResolution {
         private final Task mergedTask;
         private final boolean shouldUpdateLocal;
         private final boolean shouldUpdateRemote;
 
-        public ConflictResolution(Task mergedTask, boolean shouldUpdateLocal, boolean shouldUpdateRemote) {
+        public ConflictResolution(
+                Task mergedTask, boolean shouldUpdateLocal, boolean shouldUpdateRemote) {
             this.mergedTask = mergedTask;
             this.shouldUpdateLocal = shouldUpdateLocal;
             this.shouldUpdateRemote = shouldUpdateRemote;
@@ -170,7 +206,6 @@ public class TaskMergeService {
         }
     }
 
-    // Result class to return multiple outputs from merge operation
     public static class MergeResult {
         private final Map<String, Task> mergedTasks;
         private final Map<String, Task> toCreateRemote;
@@ -183,8 +218,7 @@ public class TaskMergeService {
                 Map<String, Task> toCreateRemote,
                 Map<String, Task> toUpdateRemote,
                 Map<String, Task> toCreateLocal,
-                Map<String, Task> toUpdateLocal
-        ) {
+                Map<String, Task> toUpdateLocal) {
             this.mergedTasks = mergedTasks;
             this.toCreateRemote = toCreateRemote;
             this.toUpdateRemote = toUpdateRemote;
@@ -192,7 +226,6 @@ public class TaskMergeService {
             this.toUpdateLocal = toUpdateLocal;
         }
 
-        // Getters
         public Map<String, Task> getMergedTasks() {
             return mergedTasks;
         }

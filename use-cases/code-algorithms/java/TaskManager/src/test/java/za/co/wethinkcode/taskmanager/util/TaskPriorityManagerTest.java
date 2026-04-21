@@ -1,15 +1,16 @@
 package za.co.wethinkcode.taskmanager.util;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
 import za.co.wethinkcode.taskmanager.model.Task;
 import za.co.wethinkcode.taskmanager.model.TaskPriority;
 import za.co.wethinkcode.taskmanager.model.TaskStatus;
-import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class TaskPriorityManagerTest {
 
@@ -18,7 +19,7 @@ class TaskPriorityManagerTest {
         // Arrange
         Task lowPriorityTask = new Task("Low priority task");
         lowPriorityTask.setPriority(TaskPriority.LOW);
-        
+
         Task highPriorityTask = new Task("High priority task");
         highPriorityTask.setPriority(TaskPriority.HIGH);
 
@@ -35,7 +36,7 @@ class TaskPriorityManagerTest {
         // Arrange
         Task overdueTask = new Task("Overdue task");
         overdueTask.setDueDate(LocalDateTime.now().minusDays(1));
-        
+
         Task upcomingTask = new Task("Upcoming task");
         upcomingTask.setDueDate(LocalDateTime.now().plusDays(10));
 
@@ -52,7 +53,7 @@ class TaskPriorityManagerTest {
         // Arrange
         Task todoTask = new Task("Todo task");
         todoTask.setStatus(TaskStatus.TODO);
-        
+
         Task doneTask = new Task("Done task");
         doneTask.setStatus(TaskStatus.DONE);
 
@@ -68,7 +69,7 @@ class TaskPriorityManagerTest {
     void calculateTaskScore_shouldBoostScoreForBlockerTag() {
         // Arrange
         Task regularTask = new Task("Regular task");
-        
+
         Task blockerTask = new Task("Blocker task");
         blockerTask.addTag("blocker");
 
@@ -85,21 +86,20 @@ class TaskPriorityManagerTest {
         // Arrange
         Task lowPriorityTask = new Task("Low priority task");
         lowPriorityTask.setPriority(TaskPriority.LOW);
-        
+
         Task highPriorityTask = new Task("High priority task");
         highPriorityTask.setPriority(TaskPriority.HIGH);
-        
+
         Task urgentOverdueTask = new Task("Urgent overdue task");
         urgentOverdueTask.setPriority(TaskPriority.URGENT);
         urgentOverdueTask.setDueDate(LocalDateTime.now().minusDays(1));
-        
+
         Task completedTask = new Task("Completed task");
         completedTask.setPriority(TaskPriority.HIGH);
         completedTask.setStatus(TaskStatus.DONE);
-        
-        List<Task> tasks = Arrays.asList(
-            lowPriorityTask, completedTask, urgentOverdueTask, highPriorityTask
-        );
+
+        List<Task> tasks =
+                Arrays.asList(lowPriorityTask, completedTask, urgentOverdueTask, highPriorityTask);
 
         // Act
         List<Task> sortedTasks = TaskPriorityManager.sortTasksByImportance(tasks);
@@ -117,16 +117,16 @@ class TaskPriorityManagerTest {
         // Arrange
         Task task1 = new Task("Task 1");
         task1.setPriority(TaskPriority.LOW);
-        
+
         Task task2 = new Task("Task 2");
         task2.setPriority(TaskPriority.MEDIUM);
-        
+
         Task task3 = new Task("Task 3");
         task3.setPriority(TaskPriority.HIGH);
-        
+
         Task task4 = new Task("Task 4");
         task4.setPriority(TaskPriority.URGENT);
-        
+
         List<Task> tasks = Arrays.asList(task1, task2, task3, task4);
 
         // Act
@@ -137,4 +137,26 @@ class TaskPriorityManagerTest {
         assertEquals(task4, topTasks.get(0));
         assertEquals(task3, topTasks.get(1));
     }
+
+    @Test
+    void sortTasksByImportance_computesEachScoreOnce() {
+        // Create tasks with known scores
+        Task low = new Task("Low task");
+        low.setPriority(TaskPriority.LOW); // score = 10
+
+        Task urgent = new Task("Urgent task");
+        urgent.setPriority(TaskPriority.URGENT); // score = 40
+
+        Task medium = new Task("Medium task");
+        medium.setPriority(TaskPriority.MEDIUM); // score = 20
+
+        List<Task> tasks = List.of(low, urgent, medium);
+        List<Task> sorted = TaskPriorityManager.sortTasksByImportance(tasks);
+
+        // Urgent should be first, Low should be last
+        assertEquals("Urgent task", sorted.get(0).getTitle());
+        assertEquals("Medium task", sorted.get(1).getTitle());
+        assertEquals("Low task", sorted.get(2).getTitle());
+    }
 }
+
