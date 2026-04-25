@@ -17,14 +17,15 @@ public class Task {
     private LocalDateTime dueDate;
     private LocalDateTime completedAt;
     private List<String> tags;
+    private String assignedUserId;
 
     public Task(
-        String title,
-        String description,
-        TaskPriority priority,
-        LocalDateTime dueDate,
-        List<String> tags
-    ) {
+            String title,
+            String description,
+            TaskPriority priority,
+            LocalDateTime dueDate,
+            List<String> tags) {
+
         this.id = UUID.randomUUID().toString();
         this.title = title;
         this.description = description;
@@ -35,6 +36,7 @@ public class Task {
         this.dueDate = dueDate;
         this.completedAt = null;
         this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
+        this.assignedUserId = null; // important default
     }
 
     public Task(String title) {
@@ -45,9 +47,18 @@ public class Task {
         this(title, description, TaskPriority.MEDIUM, null, null);
     }
 
-    // Getters and Setters
+    // ---------------- Getters & Setters ----------------
+
     public String getId() {
         return id;
+    }
+
+    public String getAssignedUserId() {
+        return assignedUserId;
+    }
+
+    public void setAssignedUserId(String assignedUserId) {
+        this.assignedUserId = assignedUserId;
     }
 
     public void setId(String id) {
@@ -126,7 +137,8 @@ public class Task {
         this.tags = new ArrayList<>(tags);
     }
 
-    // Business methods
+    // ---------------- Business methods ----------------
+
     public void update(Task updates) {
         if (updates.getTitle() != null) {
             this.title = updates.getTitle();
@@ -146,6 +158,7 @@ public class Task {
         if (updates.getTags() != null && !updates.getTags().isEmpty()) {
             this.tags = new ArrayList<>(updates.getTags());
         }
+
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -159,10 +172,7 @@ public class Task {
         if (this.dueDate == null) {
             return false;
         }
-        return (
-            this.dueDate.isBefore(LocalDateTime.now()) &&
-            this.status != TaskStatus.DONE
-        );
+        return this.dueDate.isBefore(LocalDateTime.now()) && this.status != TaskStatus.DONE;
     }
 
     public void addTag(String tag) {

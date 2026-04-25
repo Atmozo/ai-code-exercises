@@ -11,67 +11,47 @@ import java.util.stream.Collectors;
 
 public class TaskPriorityManager {
 
-    /**
-     * Calculate a priority score for a task based on multiple factors.
-     */
+    /** CORE scoring method (no user context) */
     public static int calculateTaskScore(Task task) {
-        // Base priority weights
-        Map<TaskPriority, Integer> priorityWeights = Map.of(
-            TaskPriority.LOW,
-            1,
-            TaskPriority.MEDIUM,
-            2,
-            TaskPriority.HIGH,
-            3,
-            TaskPriority.URGENT,
-            4
-        );
+        Map<TaskPriority, Integer> priorityWeights =
+                Map.of(
+                        TaskPriority.LOW, 1,
+                        TaskPriority.MEDIUM, 2,
+                        TaskPriority.HIGH, 3,
+                        TaskPriority.URGENT, 4);
 
-        // Calculate base score from priority
         int score = priorityWeights.getOrDefault(task.getPriority(), 0) * 10;
 
-        // Add due date factor (higher score for tasks due sooner)
+        // Due date scoring
         if (task.getDueDate() != null) {
-            long daysUntilDue = ChronoUnit.DAYS.between(
-                LocalDateTime.now(),
-                task.getDueDate()
-            );
-
-            if (daysUntilDue < 0) { // Overdue tasks
+            long daysUntilDue = ChronoUnit.DAYS.between(LocalDateTime.now(), task.getDueDate());
+            if (daysUntilDue < 0) {
                 score += 30;
-            } else if (daysUntilDue == 0) { // Due today
+            } else if (daysUntilDue == 0) {
                 score += 20;
-            } else if (daysUntilDue <= 2) { // Due in next 2 days
+            } else if (daysUntilDue <= 2) {
                 score += 15;
-            } else if (daysUntilDue <= 7) { // Due in next week
+            } else if (daysUntilDue <= 7) {
                 score += 10;
             }
         }
 
-        // Reduce score for tasks that are completed or in review
+        // Status penalties
         if (task.getStatus() == TaskStatus.DONE) {
             score -= 50;
         } else if (task.getStatus() == TaskStatus.REVIEW) {
             score -= 15;
         }
 
-        // Boost score for tasks with certain tags
-        if (
-            task
-                .getTags()
-                .stream()
-                .anyMatch(tag ->
-                    List.of("blocker", "critical", "urgent").contains(tag)
-                )
-        ) {
+        // Tag boost
+        if (task.getTags() != null
+                && task.getTags().stream()
+                        .anyMatch(tag -> List.of("blocker", "critical", "urgent").contains(tag))) {
             score += 8;
         }
 
-        // Boost score for recently updated tasks
-        long daysSinceUpdate = ChronoUnit.DAYS.between(
-            task.getUpdatedAt(),
-            LocalDateTime.now()
-        );
+        // Recency boost
+        long daysSinceUpdate = ChronoUnit.DAYS.between(task.getUpdatedAt(), LocalDateTime.now());
         if (daysSinceUpdate < 1) {
             score += 5;
         }
@@ -79,27 +59,35 @@ public class TaskPriorityManager {
         return score;
     }
 
-    /**
-     * Sort tasks by calculated importance score (highest first).
-     */
-    public static List<Task> sortTasksByImportance(List<Task> tasks) {
-        return tasks
-            .stream()
-            .sorted(
-                Comparator.comparing(
-                    TaskPriorityManager::calculateTaskScore
-                ).reversed()
-            )
-            .collect(Collectors.toList());
+    /** Overloaded scoring method — adds +12 boost if task assigned to currentUserId */
+    public static int calculateTaskScore(Task task, String currentUserId) {
+        int score = calculateTaskScore(task);
+        if (currentUserId != null && currentUserId.equals(task.getAssignedUserId())) {
+            score += 12;
+        }
+        return score;
     }
 
-    /**
-     * Return the top N priority tasks.
-     */
+    /** Sort tasks using full scoring with user context */
+    public static List<Task> getTopPriorityTasks(
+            List<Task> tasks, int limit, String currentUserId) {
+        return tasks.stream()
+                .sorted(
+                        Comparator.comparingInt((Task t) -> calculateTaskScore(t, currentUserId))
+                                .reversed())
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    /** Sort tasks by score descending (no user context) */
+    public static List<Task> sortTasksByImportance(List<Task> tasks) {
+        return tasks.stream()
+                .sorted(Comparator.comparingInt((Task t) -> calculateTaskScore(t)).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /** Return top N tasks by score (no user context) */
     public static List<Task> getTopPriorityTasks(List<Task> tasks, int limit) {
-        return sortTasksByImportance(tasks)
-            .stream()
-            .limit(limit)
-            .collect(Collectors.toList());
+        return sortTasksByImportance(tasks).stream().limit(limit).collect(Collectors.toList());
     }
 }
